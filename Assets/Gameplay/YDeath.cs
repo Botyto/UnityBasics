@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-public class YDeath : BasicMonoBehaviour
+public class YDeath : BasicMonoBehavior
 {
     public bool Absolute = true;
     public float Y = 0.0f;

@@ -1,8 +1,15 @@
 ﻿using UnityEditor;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using System;
+using System.Linq;
+
+#if UNITY_EDITOR
+using Microsoft.CSharp;
+using System.CodeDom.Compiler;
+using System.Reflection;
+#endif
 
 public class UIDevConsole : UIDialog
 {
@@ -53,12 +60,141 @@ public class UIDevConsole : UIDialog
         }
     }
 
+    static readonly string[] CodeUsingItems = new string[] { "System", "UnityEngine", "UnityEditor" };
+    static readonly string CodeUsings = string.Join(" ", CodeUsingItems.Select(x => $"using {x};")) + " ";
+    static readonly string[] CodeHelperFuncs = new string[] {
+    };
+    static readonly string[] CodeBuiltInHelperFuncs = new string[] {
+        "UnityEngine.Object.Instantiate, UnityEngine",
+        "UnityEngine.Object.Destroy, UnityEngine",
+        "UnityEngine.Object.DestroyImmediate, UnityEngine",
+        "UnityEngine.Object.FindObjectsOfType, UnityEngine",
+        "UnityEngine.Object.FindSceneObjectsOfType, UnityEngine",
+        "UnityEngine.MonoBehaviour.print, UnityEngine"
+    };
+    const string CodeClassName = "DbgExec";
+    const string CodeFuncName = "Cmd";
+    const string CodeClassDef = "public class "+CodeClassName+" {{\n {0}\n {1}\n {2}\n }}";
+    static string[] CodeFormatsCache = null;
+    static string[] CodeFuncFormats = new string[] {
+        "public void "+CodeFuncName+"() { print({0}); }",
+        "public void "+CodeFuncName+"() { {0}; }",
+    };
+
     private void OnSubmit(string code)
     {
         InputField.gameObject.SetActive(false);
         if (string.IsNullOrEmpty(code)) { return; }
 
-        print(code);
+#if UNITY_EDITOR
+        if (CodeFormatsCache == null)
+        {
+            string builtInHelperFuncs = "";
+            foreach (string path in CodeBuiltInHelperFuncs)
+            {
+                var dotIdx = path.LastIndexOf(".");
+                var classPath = path.Substring(0, dotIdx);
+                var typePath = classPath;
+                var funcName = path.Substring(dotIdx+1);
+                var commaIdx = path.IndexOf(",");
+                if (commaIdx > 0) {
+                    typePath += ", " + funcName.Substring(commaIdx - dotIdx);
+                    funcName = funcName.Substring(0, commaIdx - dotIdx - 1);
+                }
+                var classType = Type.GetType(typePath);
+                foreach (var methodInfo in classType.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy))
+                {
+                    if (methodInfo.Name != funcName) { continue; }
+                    if (methodInfo.GetCustomAttribute<ObsoleteAttribute>() != null) { continue; }
+                    string funcDef = $"public static ";
+                    if (methodInfo.ReturnType == typeof(void)) { funcDef += "void"; }
+                    else { funcDef += methodInfo.ReturnType.ToString(); };
+                    funcDef += " " + funcName;
+                    if (methodInfo.IsGenericMethod)
+                    {
+                        funcDef += "<";
+                        foreach (var genericType in methodInfo.GetGenericArguments())
+                        {
+                            funcDef += genericType.Name;
+                        }
+                        funcDef += ">";
+                    }
+                    funcDef += "(";
+                    funcDef += string.Join(", ", methodInfo.GetParameters().Select(pi => $"{pi.ParameterType} {pi.Name}"));
+                    funcDef += ") { ";
+                    if (methodInfo.ReturnType != typeof(void)) { funcDef += "return "; }
+                    funcDef += $"{classPath}.{funcName}";
+                    if (methodInfo.IsGenericMethod)
+                    {
+                        funcDef += "<";
+                        foreach (var genericType in methodInfo.GetGenericArguments())
+                        {
+                            funcDef += genericType.Name;
+                        }
+                        funcDef += ">";
+                    }
+                    funcDef += "(";
+                    funcDef += string.Join(", ", methodInfo.GetParameters().Select(pi => pi.Name));
+                    funcDef += "); }";
+                    builtInHelperFuncs += $"{funcDef}\n";
+                }
+            }
+            CodeFormatsCache = CodeFuncFormats.Select(fn =>
+                string.Format(
+                    $"{CodeUsings}\n{CodeClassDef}",
+                    string.Join("\n", CodeHelperFuncs.Select(fn => $"\t{fn}")),
+                    builtInHelperFuncs,
+                    fn)
+                .Replace("{0}", "!@#$")
+                .Replace("{", "{{")
+                .Replace("}", "}}")
+                .Replace("!@#$", "{0}")
+                ).ToArray();
+        }
+        foreach (string format in CodeFormatsCache)
+        {
+            if (TryExecuteCSharp(format, code))
+            {
+                break;
+            }
+        }
+#else
+        print("Console is only available in the Unity editor");
+#endif
+    }
+
+    private bool TryExecuteCSharp(string format, string code)
+    {
+        var provider = new CSharpCodeProvider();
+        var parameters = new CompilerParameters(new string[] { "UnityEngine" });
+        parameters.GenerateInMemory = true;
+        parameters.GenerateExecutable = false;
+        parameters.IncludeDebugInformation = false;
+        var fullCode = string.Format(format, code);
+        var results = provider.CompileAssemblyFromSource(parameters, fullCode);
+        if (results.Errors.HasErrors)
+        {
+            for (int i = 0; i < results.Errors.Count; ++i)
+            {
+                Debug.LogError(results.Errors[i]);
+            }
+            return false;
+        }
+
+        var assembly = results.CompiledAssembly;
+        var instance = assembly.CreateInstance(CodeClassName);
+        var methodInfo = instance.GetType().GetMethod(CodeFuncName);
+        try
+        {
+            methodInfo.Invoke(instance, null);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            return false;
+        }
+
+        return true;
     }
 
     private void InitUI()
@@ -115,7 +251,7 @@ public class UIDevConsole : UIDialog
             placeholderText.fontStyle = FontStyle.Italic;
             placeholderText.text = "Enter command...";
             placeholderText.color = Color.gray;
-            placeholderText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            placeholderText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             var textObj = new GameObject("Text");
             textObj.transform.parent = inputObj.transform;
@@ -127,7 +263,7 @@ public class UIDevConsole : UIDialog
             var textText = textObj.AddComponent<Text>();
             textText.supportRichText = false;
             textText.color = Color.black;
-            textText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            textText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             //references
             inputField.targetGraphic = inputImage;
