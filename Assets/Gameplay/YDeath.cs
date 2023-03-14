@@ -6,23 +6,24 @@ public class YDeath : BasicMonoBehavior
     public bool Absolute = true;
     public float Y = 0.0f;
 
+    [FindInThis]
     [SerializeField]
     [HideInInspector]
-    private Transform m_Transform;
+    private Transform Transform;
     [SerializeField]
     [HideInInspector]
-    private float m_StartY = float.NegativeInfinity;
+    private float StartY = float.NegativeInfinity;
 
     private void Start()
     {
-        m_Transform = GetComponent<Transform>();
-        m_StartY = m_Transform.position.y;
+        Transform = GetComponent<Transform>();
+        StartY = Transform.position.y;
     }
 
     void FixedUpdate()
     {
-        var minY = Absolute ? Y : m_StartY + Y;
-        if ((m_Transform.position.y - minY) * Mathf.Sign(Y) > 0)
+        var minY = Absolute ? Y : StartY + Y;
+        if ((Transform.position.y - minY) * Mathf.Sign(Y) > 0)
         {
             //TODO kill
         }
@@ -32,7 +33,7 @@ public class YDeath : BasicMonoBehavior
     private void OnDrawGizmos()
     {
         var z = transform.position.z;
-        var minY = Absolute ? Y : (m_StartY == float.NegativeInfinity ? transform.position.y : m_StartY) + Y;
+        var minY = Absolute ? Y : (StartY == float.NegativeInfinity ? transform.position.y : StartY) + Y;
         Handles.color = Color.red;
         Handles.zTest = UnityEngine.Rendering.CompareFunction.Less;
         var currentCamera = Camera.current;
@@ -57,7 +58,7 @@ public class YDeath : BasicMonoBehavior
     private void OnDrawGizmosSelected()
     {
         var z = transform.position.z;
-        var minY = Absolute ? Y : (m_StartY == float.NegativeInfinity ? transform.position.y : m_StartY) + Y;
+        var minY = Absolute ? Y : (StartY == float.NegativeInfinity ? transform.position.y : StartY) + Y;
         Handles.color = Color.red;
         Handles.zTest = UnityEngine.Rendering.CompareFunction.Less;
 

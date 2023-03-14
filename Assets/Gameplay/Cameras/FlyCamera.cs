@@ -19,8 +19,8 @@ public class FlyCamera : MonoBehaviour
     public KeyCode slowMovementKey = KeyCode.LeftControl;
     public KeyCode lockMouseKey = KeyCode.End;
 
-    private float rotationX = 0.0f;
-    private float rotationY = 0.0f;
+    private float RotationX = 0.0f;
+    private float RotationY = 0.0f;
 
     void Start()
     {
@@ -29,12 +29,12 @@ public class FlyCamera : MonoBehaviour
 
     void Update()
     {
-        rotationX += Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        rotationY += Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
-        rotationY = Mathf.Clamp(rotationY, -90, 90);
+        RotationX += Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
+        RotationY += Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+        RotationY = Mathf.Clamp(RotationY, -90, 90);
 
-        transform.localRotation = Quaternion.AngleAxis(rotationX, Vector3.up);
-        transform.localRotation *= Quaternion.AngleAxis(rotationY, Vector3.left);
+        transform.localRotation = Quaternion.AngleAxis(RotationX, Vector3.up);
+        transform.localRotation *= Quaternion.AngleAxis(RotationY, Vector3.left);
 
         var moveSpeed = normalMoveSpeed;
         if (Input.GetKey(fastMovementKey))

@@ -19,15 +19,13 @@ public class RotateCollectable2D : BasicMonoBehavior
     [Min(0.0f)]
     public float RotatePeriod = 2.0f;
 
-    private Transform m_Transform;
+    [FindInThis]
+    [SerializeField]
+    [HideInInspector]
+    private Transform Transform;
 
     public bool BobbingEnabled => (BobbingDistance > float.Epsilon && BobbingPeriod > float.Epsilon);
     public bool RotateEnabled => (RotatePeriod > float.Epsilon);
-
-    private void Awake()
-    {
-        m_Transform = transform;
-    }
 
     private void OnEnable()
     {
@@ -39,12 +37,12 @@ public class RotateCollectable2D : BasicMonoBehavior
         var internalTimer = Time.fixedTime - m_EnableTime;
         if (BobbingEnabled)
         {
-            m_Transform.Translate(0, Time.fixedDeltaTime * BobbingDistance / BobbingPeriod / Mathf.PI * 10 * BobbingTrigFunc(internalTimer / BobbingPeriod * 2 * Mathf.PI), 0);
+            Transform.Translate(0, Time.fixedDeltaTime * BobbingDistance / BobbingPeriod / Mathf.PI * 10 * BobbingTrigFunc(internalTimer / BobbingPeriod * 2 * Mathf.PI), 0);
         }
 
         if (RotateEnabled)
         {
-            m_Transform.Rotate(0, 360.0f * Time.fixedDeltaTime / RotatePeriod, 0);
+            Transform.Rotate(0, 360.0f * Time.fixedDeltaTime / RotatePeriod, 0);
         }
     }
 

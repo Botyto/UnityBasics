@@ -24,19 +24,19 @@ public class DreamloLeaderboardApi
         public DateTime DateTime;
     }
 
-    private readonly DreamloLeaderboard m_Leaderboard;
+    private readonly DreamloLeaderboard Leaderboard;
     public event Action<IEnumerable<Entry>> OnEntriesReceived;
     public event Action<string, ApiAction> OnError;
 
     public const string Domain = "dreamlo.com";
-    private string UrlScheme => m_Leaderboard.UseSSL ? "https" : "http";
+    private string UrlScheme => Leaderboard.UseSSL ? "https" : "http";
     private string BaseURL => $"{UrlScheme}://{Domain}/lb";
-    public string BasePrivateURL => $"{BaseURL}/{m_Leaderboard.PrivateCode}";
-    public string BasePublicURL => $"{BaseURL}/{m_Leaderboard.PublicCode}";
+    public string BasePrivateURL => $"{BaseURL}/{Leaderboard.PrivateCode}";
+    public string BasePublicURL => $"{BaseURL}/{Leaderboard.PublicCode}";
 
     public DreamloLeaderboardApi(DreamloLeaderboard leaderboard)
     {
-        m_Leaderboard = leaderboard;
+        Leaderboard = leaderboard;
     }
 
     public IEnumerator Add(string username, int score, int seconds = 0, string text = "")
@@ -65,7 +65,7 @@ public class DreamloLeaderboardApi
 
     public IEnumerator Fetch()
     {
-        var suffix = FetchPathSuffix(m_Leaderboard.SortOrder);
+        var suffix = FetchPathSuffix(Leaderboard.SortOrder);
         var url = $"{BasePrivateURL}/pipe{suffix}";
         return SendRequest(url, true, ApiAction.Fetch);
     }

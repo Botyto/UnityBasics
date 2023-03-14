@@ -8,12 +8,12 @@ using UnityEngine;
 [Serializable]
 public struct TaggedText
 {
-    private const char c_TagOpener = '<';
-    private const char c_TagCloser = '>';
-    private const char c_TagNester = '.';
-    private const char c_FunctionArgsOpener = '(';
-    private const char c_FunctionArgsCloser = ')';
-    private const char c_FunctionArgsSeparator = ',';
+    private const char TagOpener = '<';
+    private const char TagCloser = '>';
+    private const char TagNester = '.';
+    private const char FunctionArgsOpener = '(';
+    private const char FunctionArgsCloser = ')';
+    private const char FunctionArgsSeparator = ',';
 
     public string Text;
     public object Context;
@@ -298,7 +298,7 @@ public struct TaggedText
 
     private static string[] ParseNestedTag(string tag)
     {
-        return ParseTagParts(tag, c_TagNester);
+        return ParseTagParts(tag, TagNester);
     }
 
     private static bool ParseFunction(string tag, out string name, out string[] args)
@@ -306,10 +306,10 @@ public struct TaggedText
         name = null;
         args = null;
 
-        var openIdx = tag.IndexOf(c_FunctionArgsOpener);
+        var openIdx = tag.IndexOf(FunctionArgsOpener);
         if (openIdx == -1) { return false; }
 
-        var closeIdx = tag.LastIndexOf(c_FunctionArgsCloser);
+        var closeIdx = tag.LastIndexOf(FunctionArgsCloser);
         if (closeIdx == -1) { return false; }
 
         name = tag.Substring(0, openIdx);
@@ -321,7 +321,7 @@ public struct TaggedText
 
     private static string[] ParseFunctionArgs(string args)
     {
-        return ParseTagParts(args, c_FunctionArgsSeparator);
+        return ParseTagParts(args, FunctionArgsSeparator);
     }
 
     private static bool ParseComposite(string tag, out string name, out string[] args)
@@ -346,10 +346,10 @@ public struct TaggedText
         tagStart = -1;
         tagEnd = -1;
 
-        var openIdx = t.IndexOf(c_TagOpener, offset);
+        var openIdx = t.IndexOf(TagOpener, offset);
         if (openIdx == -1) { return false; }
 
-        var closeIdx = t.IndexOf(c_TagCloser, openIdx);
+        var closeIdx = t.IndexOf(TagCloser, openIdx);
         if (closeIdx == -1) { return false; }
 
         //empty tag
@@ -370,8 +370,8 @@ public struct TaggedText
         for (var i = 0; i < args.Length; ++i)
         {
             var c = args[i];
-            if (c == c_FunctionArgsOpener) { ++braketsLevel; continue; }
-            if (c == c_FunctionArgsCloser) { --braketsLevel; continue; }
+            if (c == FunctionArgsOpener) { ++braketsLevel; continue; }
+            if (c == FunctionArgsCloser) { --braketsLevel; continue; }
             if (c == separator && braketsLevel == 0)
             {
                 var arg = args.Substring(startIdx, i - startIdx);

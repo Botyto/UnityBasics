@@ -6,26 +6,26 @@ using UnityEngine;
 public struct Modifiable
 {
     [SerializeField]
-    private float m_BaseValue;
+    private float OriginalValue;
     [SerializeField]
-    private float m_Value;
+    private float FinalValue;
     [SerializeField]
-    private List<Modifier> m_Modifiers;
+    private List<Modifier> Modifiers;
 
-    public float Value => m_Value;
+    public float Value => FinalValue;
 
     public float BaseValue 
     {
         get
         {
-            return m_BaseValue;
+            return BaseValue;
         }
 
         set
         {
-            if (value != m_BaseValue)
+            if (value != BaseValue)
             {
-                m_BaseValue = value;
+                BaseValue = value;
                 UpdateValue();
             }
         }
@@ -34,23 +34,23 @@ public struct Modifiable
     public Modifiable(float baseValue)
         : this()
     {
-        m_BaseValue = baseValue;
+        BaseValue = baseValue;
         UpdateValue();
     }
 
     public void AddModifier(Modifier modifier)
     {
-        if (m_Modifiers != null)
+        if (Modifiers != null)
         {
             if (ModifierIdxById(modifier.Id) == -1)
             {
-                m_Modifiers.Add(modifier);
+                Modifiers.Add(modifier);
                 UpdateValue();
             }
         }
         else
         {
-            m_Modifiers = new List<Modifier>()
+            Modifiers = new List<Modifier>()
             {
                 modifier,
             };
@@ -61,18 +61,18 @@ public struct Modifiable
     {
         var removeAtIdx = ModifierIdxById(id);
         if (removeAtIdx == -1) { return; }
-        m_Modifiers.RemoveAt(removeAtIdx);
+        Modifiers.RemoveAt(removeAtIdx);
         UpdateValue();
     }
 
     private int ModifierIdxById(string id)
     {
-        if (m_Modifiers != null)
+        if (Modifiers != null)
         {
-            var count = m_Modifiers.Count;
+            var count = Modifiers.Count;
             for (var i = 0; i < count; ++i)
             {
-                if (m_Modifiers[i].Id == id)
+                if (Modifiers[i].Id == id)
                 {
                     return i;
                 }
@@ -87,18 +87,18 @@ public struct Modifiable
         var add = 0.0f;
         var mul = 1.0f;
 
-        if (m_Modifiers != null)
+        if (Modifiers != null)
         {
-            var count = m_Modifiers.Count;
+            var count = Modifiers.Count;
             for (var i = 0; i < count; ++i)
             {
-                var modifier = m_Modifiers[i];
+                var modifier = Modifiers[i];
                 add += modifier.Add;
                 mul *= modifier.Multiply;
             }
         }
 
-        m_Value = BaseValue * mul + add;
+        FinalValue = BaseValue * mul + add;
     }
 
     public override string ToString()

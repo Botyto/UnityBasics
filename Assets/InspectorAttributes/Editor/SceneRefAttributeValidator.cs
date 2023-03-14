@@ -7,8 +7,6 @@ using UnityEditor;
 [CustomEditor(typeof(UnityEngine.Object), true)]
 public class SceneRefAttributeValidator : Editor
 {
-    private bool propertyChangedInInspector;
-
     private void OnEnable()
     {
         Undo.undoRedoPerformed += UpdateAllRefs;
@@ -29,11 +27,11 @@ public class SceneRefAttributeValidator : Editor
         public FieldInfo FieldInfo;
     }
 
-    private static Dictionary<Type, List<FieldAttributePair>> FieldAttributesCache = new();
+    private static Dictionary<Type, List<FieldAttributePair>> m_FieldAttributesCache = new();
     private static List<FieldAttributePair> GetFieldsWithAttributeFromType(Type cls)
     {
         List<FieldAttributePair> result;
-        if (!FieldAttributesCache.TryGetValue(cls, out result))
+        if (!m_FieldAttributesCache.TryGetValue(cls, out result))
         {
             result = new List<FieldAttributePair>();
             foreach (var fieldInfo in cls.GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy))
@@ -48,7 +46,7 @@ public class SceneRefAttributeValidator : Editor
                     });
                 }
             }
-            FieldAttributesCache.Add(cls, result);
+            m_FieldAttributesCache.Add(cls, result);
         }
 
         return result;
@@ -60,7 +58,8 @@ public class SceneRefAttributeValidator : Editor
         {
             foreach (var component in gameObject.GetComponents<Component>())
             {
-                UpdateComponentRefs(component);
+                if (component == null) { continue; }
+                UpdateComponentRefs(component); 
             }
         }
     }
