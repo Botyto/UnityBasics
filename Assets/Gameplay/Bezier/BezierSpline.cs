@@ -1,5 +1,6 @@
-using UnityEngine;
 using System;
+using UnityEngine;
+using UnityEditor;
 
 [ExecuteInEditMode]
 [Serializable]
@@ -254,6 +255,19 @@ public class BezierSpline : MonoBehaviour
             m_ControlPoints[m_ControlPoints.Length - 1] = m_ControlPoints[0];
             m_Modes[m_Modes.Length - 1] = m_Modes[0];
             EnforceMode(0);
+        }
+    }
+
+    private void OnDrawGizmos()
+    {
+        var myTransform = transform;
+        for (int i = 0; i < ControlPointCount - 1; i += 3)
+        {
+            var p0 = myTransform.TransformPoint(this[i + 0]);
+            var p1 = myTransform.TransformPoint(this[i + 1]);
+            var p2 = myTransform.TransformPoint(this[i + 2]);
+            var p3 = myTransform.TransformPoint(this[i + 3]);
+            Handles.DrawBezier(p0, p3, p1, p2, Color.white, null, 2f);
         }
     }
 

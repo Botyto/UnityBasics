@@ -22,8 +22,7 @@ public class BezierSplineEditor : Editor
     {
         spline = target as BezierSpline;
         handleTransform = spline.transform;
-        handleRotation = Tools.pivotRotation == PivotRotation.Local ?
-            handleTransform.rotation : Quaternion.identity;
+        handleRotation = Tools.pivotRotation == PivotRotation.Local ? handleTransform.rotation : Quaternion.identity;
 
         Vector3 p0 = ShowPoint(0);
         for (int i = 1; i < spline.ControlPointCount; i += 3)
@@ -36,7 +35,6 @@ public class BezierSplineEditor : Editor
             Handles.DrawLine(p0, p1);
             Handles.DrawLine(p2, p3);
             
-            Handles.DrawBezier(p0, p3, p1, p2, Color.white, null, 2f);
             p0 = p3;
         }
     }
