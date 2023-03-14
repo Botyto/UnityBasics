@@ -234,7 +234,7 @@ public class BezierSpline : MonoBehaviour
         return GetVelocity(t).normalized;
     }
 
-    public void AddCurve()
+    public void AddSegment()
     {
         Vector3 point = m_ControlPoints[m_ControlPoints.Length - 1];
         Array.Resize(ref m_ControlPoints, m_ControlPoints.Length + 3);

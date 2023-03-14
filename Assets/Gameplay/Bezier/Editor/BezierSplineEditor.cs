@@ -5,27 +5,19 @@ using static BezierSpline;
 [CustomEditor(typeof(BezierSpline))]
 public class BezierSplineEditor : Editor
 {
-    private BezierSpline spline;
-    private Transform handleTransform;
-    private Quaternion handleRotation;
-
-    private const int stepsPerCurve = 10;
-    private const float directionScale = 0.5f;
-
-    private static Color[] modeColors = {
-        Color.white,
-        Color.yellow,
-        Color.cyan
-    };
+    private BezierSpline m_Spline;
+    private Transform m_HandleTransform;
+    private Quaternion m_HandleRotation;
+    private int m_SelectedIndex = -1;
 
     private void OnSceneGUI()
     {
-        spline = target as BezierSpline;
-        handleTransform = spline.transform;
-        handleRotation = Tools.pivotRotation == PivotRotation.Local ? handleTransform.rotation : Quaternion.identity;
+        m_Spline = target as BezierSpline;
+        m_HandleTransform = m_Spline.transform;
+        m_HandleRotation = Tools.pivotRotation == PivotRotation.Local ? m_HandleTransform.rotation : Quaternion.identity;
 
         Vector3 p0 = ShowPoint(0);
-        for (int i = 1; i < spline.ControlPointCount; i += 3)
+        for (int i = 1; i < m_Spline.ControlPointCount; i += 3)
         {
             Vector3 p1 = ShowPoint(i);
             Vector3 p2 = ShowPoint(i + 1);
@@ -41,91 +33,77 @@ public class BezierSplineEditor : Editor
 
     public override void OnInspectorGUI()
     {
-        spline = target as BezierSpline;
+        m_Spline = target as BezierSpline;
         EditorGUI.BeginChangeCheck();
-        bool loop = EditorGUILayout.Toggle("Loop", spline.Loop);
+        bool loop = EditorGUILayout.Toggle("Loop", m_Spline.Loop);
         if (EditorGUI.EndChangeCheck())
         {
-            Undo.RecordObject(spline, "Toggle Loop");
-            EditorUtility.SetDirty(spline);
-            spline.Loop = loop;
+            Undo.RecordObject(m_Spline, "Toggle loop");
+            EditorUtility.SetDirty(m_Spline);
+            m_Spline.Loop = loop;
         }
-        if (selectedIndex >= 0 && selectedIndex < spline.ControlPointCount)
+        if (m_SelectedIndex >= 0 && m_SelectedIndex < m_Spline.ControlPointCount)
         {
             DrawSelectedPointInspector();
         }
-        if (GUILayout.Button("Add Curve"))
+        if (GUILayout.Button("Add segment"))
         {
-            Undo.RecordObject(spline, "Add Curve");
-            spline.AddCurve();
-            EditorUtility.SetDirty(spline);
+            Undo.RecordObject(m_Spline, "Add segment");
+            m_Spline.AddSegment();
+            EditorUtility.SetDirty(m_Spline);
         }
     }
 
     private void DrawSelectedPointInspector()
     {
-        GUILayout.Label("Selected Point");
+        GUILayout.Label("Selected control point");
         EditorGUI.BeginChangeCheck();
-        Vector3 point = EditorGUILayout.Vector3Field("Position", spline.GetControlPoint(selectedIndex));
+        Vector3 point = EditorGUILayout.Vector3Field("Position", m_Spline.GetControlPoint(m_SelectedIndex));
         if (EditorGUI.EndChangeCheck())
         {
-            Undo.RecordObject(spline, "Move Point");
-            EditorUtility.SetDirty(spline);
-            spline.SetControlPoint(selectedIndex, point);
+            Undo.RecordObject(m_Spline, "Move control point");
+            EditorUtility.SetDirty(m_Spline);
+            m_Spline.SetControlPoint(m_SelectedIndex, point);
         }
 
         EditorGUI.BeginChangeCheck();
         BezierControlPointMode mode = (BezierControlPointMode)
-            EditorGUILayout.EnumPopup("Mode", spline.GetControlPointMode(selectedIndex));
+            EditorGUILayout.EnumPopup("Mode", m_Spline.GetControlPointMode(m_SelectedIndex));
         if (EditorGUI.EndChangeCheck())
         {
-            Undo.RecordObject(spline, "Change Point Mode");
-            spline.SetControlPointMode(selectedIndex, mode);
-            EditorUtility.SetDirty(spline);
+            Undo.RecordObject(m_Spline, "Change control point mode");
+            m_Spline.SetControlPointMode(m_SelectedIndex, mode);
+            EditorUtility.SetDirty(m_Spline);
         }
     }
 
-    private void ShowDirections()
-    {
-        Handles.color = Color.green;
-        Vector3 point = spline.GetPoint(0f);
-        Handles.DrawLine(point, point + spline.GetDirection(0f) * directionScale);
-        int steps = stepsPerCurve * spline.CurveCount;
-        for (int i = 1; i <= steps; i++)
-        {
-            point = spline.GetPoint(i / (float)steps);
-            Handles.DrawLine(point, point + spline.GetDirection(i / (float)steps) * directionScale);
-        }
-    }
-
-    private const float handleSize = 0.04f;
-    private const float pickSize = 0.06f;
-
-    private int selectedIndex = -1;
+    private const float c_HandleSize = 0.04f;
+    private const float c_PickSize = 0.06f;
+    private static Color[] s_ModeColors = { Color.white, Color.yellow, Color.cyan };
 
     private Vector3 ShowPoint(int index)
     {
-        Vector3 point = handleTransform.TransformPoint(spline.GetControlPoint(index));
+        Vector3 point = m_HandleTransform.TransformPoint(m_Spline.GetControlPoint(index));
         float size = HandleUtility.GetHandleSize(point);
         if (index == 0)
         {
             size *= 2f;
         }
-        Handles.color = modeColors[(int)spline.GetControlPointMode(index)];
-        if (Handles.Button(point, handleRotation, size * handleSize, size * pickSize, Handles.DotHandleCap))
+        Handles.color = s_ModeColors[(int)m_Spline.GetControlPointMode(index)];
+        if (Handles.Button(point, m_HandleRotation, size * c_HandleSize, size * c_PickSize, Handles.DotHandleCap))
         {
-            selectedIndex = index;
+            m_SelectedIndex = index;
             Repaint();
         }
-        if (selectedIndex == index)
+        if (m_SelectedIndex == index)
         {
             EditorGUI.BeginChangeCheck();
-            point = Handles.DoPositionHandle(point, handleRotation);
+            point = Handles.DoPositionHandle(point, m_HandleRotation);
             if (EditorGUI.EndChangeCheck())
             {
-                Undo.RecordObject(spline, "Move Point");
-                EditorUtility.SetDirty(spline);
-                spline.SetControlPoint(index, handleTransform.InverseTransformPoint(point));
+                Undo.RecordObject(m_Spline, "Move Point");
+                EditorUtility.SetDirty(m_Spline);
+                m_Spline.SetControlPoint(index, m_HandleTransform.InverseTransformPoint(point));
             }
         }
         return point;
