@@ -13,111 +13,104 @@ public class BezierSpline : MonoBehaviour
     }
 
     [SerializeField]
-    private Vector3[] points;
+    private Vector3[] m_ControlPoints;
 
     [SerializeField]
-    private BezierControlPointMode[] modes;
+    private BezierControlPointMode[] m_Modes;
 
     [SerializeField]
-    private bool loop;
+    private bool m_Loop;
 
     public bool Loop
     {
         get
         {
-            return loop;
+            return m_Loop;
         }
         set
         {
-            loop = value;
+            m_Loop = value;
             if (value == true)
             {
-                modes[modes.Length - 1] = modes[0];
-                SetControlPoint(0, points[0]);
+                m_Modes[m_Modes.Length - 1] = m_Modes[0];
+                SetControlPoint(0, m_ControlPoints[0]);
             }
         }
     }
 
-    public int CurveCount
-    {
-        get
-        {
-            return (points.Length - 1) / 3;
-        }
-    }
+    public int ControlPointCount => m_ControlPoints.Length;
+    public int CurveCount => (ControlPointCount - 1) / 3;
 
-    public int ControlPointCount
+    public Vector3 this[int index]
     {
-        get
-        {
-            return points.Length;
-        }
+        get { return GetControlPoint(index); }
+        set { SetControlPoint(index, value); }
     }
 
     public Vector3 GetControlPoint(int index)
     {
-        return points[index];
+        return m_ControlPoints[index];
     }
 
     public void SetControlPoint(int index, Vector3 point)
     {
         if (index % 3 == 0)
         {
-            Vector3 delta = point - points[index];
-            if (loop)
+            Vector3 delta = point - m_ControlPoints[index];
+            if (m_Loop)
             {
                 if (index == 0)
                 {
-                    points[1] += delta;
-                    points[points.Length - 2] += delta;
-                    points[points.Length - 1] = point;
+                    m_ControlPoints[1] += delta;
+                    m_ControlPoints[m_ControlPoints.Length - 2] += delta;
+                    m_ControlPoints[m_ControlPoints.Length - 1] = point;
                 }
-                else if (index == points.Length - 1)
+                else if (index == m_ControlPoints.Length - 1)
                 {
-                    points[0] = point;
-                    points[1] += delta;
-                    points[index - 1] += delta;
+                    m_ControlPoints[0] = point;
+                    m_ControlPoints[1] += delta;
+                    m_ControlPoints[index - 1] += delta;
                 }
                 else
                 {
-                    points[index - 1] += delta;
-                    points[index + 1] += delta;
+                    m_ControlPoints[index - 1] += delta;
+                    m_ControlPoints[index + 1] += delta;
                 }
             }
             else
             {
                 if (index > 0)
                 {
-                    points[index - 1] += delta;
+                    m_ControlPoints[index - 1] += delta;
                 }
-                if (index + 1 < points.Length)
+                if (index + 1 < m_ControlPoints.Length)
                 {
-                    points[index + 1] += delta;
+                    m_ControlPoints[index + 1] += delta;
                 }
             }
         }
-        points[index] = point;
+        m_ControlPoints[index] = point;
         EnforceMode(index);
     }
 
     public BezierControlPointMode GetControlPointMode(int index)
     {
-        return modes[(index + 1) / 3];
+        return m_Modes[(index + 1) / 3];
     }
 
     public void SetControlPointMode(int index, BezierControlPointMode mode)
     {
         int modeIndex = (index + 1) / 3;
-        modes[modeIndex] = mode;
-        if (loop)
+        m_Modes[modeIndex] = mode;
+        if (m_Loop)
         {
             if (modeIndex == 0)
             {
-                modes[modes.Length - 1] = mode;
+                m_Modes[m_Modes.Length - 1] = mode;
             }
-            else if (modeIndex == modes.Length - 1)
+            else if (modeIndex == m_Modes.Length - 1)
             {
-                modes[0] = mode;
+                m_Modes[0] = mode;
             }
         }
         EnforceMode(index);
@@ -126,8 +119,8 @@ public class BezierSpline : MonoBehaviour
     private void EnforceMode(int index)
     {
         int modeIndex = (index + 1) / 3;
-        BezierControlPointMode mode = modes[modeIndex];
-        if (mode == BezierControlPointMode.Free || !loop && (modeIndex == 0 || modeIndex == modes.Length - 1))
+        BezierControlPointMode mode = m_Modes[modeIndex];
+        if (mode == BezierControlPointMode.Free || !m_Loop && (modeIndex == 0 || modeIndex == m_Modes.Length - 1))
         {
             return;
         }
@@ -139,10 +132,10 @@ public class BezierSpline : MonoBehaviour
             fixedIndex = middleIndex - 1;
             if (fixedIndex < 0)
             {
-                fixedIndex = points.Length - 2;
+                fixedIndex = m_ControlPoints.Length - 2;
             }
             enforcedIndex = middleIndex + 1;
-            if (enforcedIndex >= points.Length)
+            if (enforcedIndex >= m_ControlPoints.Length)
             {
                 enforcedIndex = 1;
             }
@@ -150,33 +143,38 @@ public class BezierSpline : MonoBehaviour
         else
         {
             fixedIndex = middleIndex + 1;
-            if (fixedIndex >= points.Length)
+            if (fixedIndex >= m_ControlPoints.Length)
             {
                 fixedIndex = 1;
             }
             enforcedIndex = middleIndex - 1;
             if (enforcedIndex < 0)
             {
-                enforcedIndex = points.Length - 2;
+                enforcedIndex = m_ControlPoints.Length - 2;
             }
         }
 
 
-        Vector3 middle = points[middleIndex];
-        Vector3 enforcedTangent = middle - points[fixedIndex];
+        Vector3 middle = m_ControlPoints[middleIndex];
+        Vector3 enforcedTangent = middle - m_ControlPoints[fixedIndex];
         if (mode == BezierControlPointMode.Aligned)
         {
-            enforcedTangent = enforcedTangent.normalized * Vector3.Distance(middle, points[enforcedIndex]);
+            enforcedTangent = enforcedTangent.normalized * Vector3.Distance(middle, m_ControlPoints[enforcedIndex]);
         }
-        points[enforcedIndex] = middle + enforcedTangent;
+        m_ControlPoints[enforcedIndex] = middle + enforcedTangent;
     }
 
     public void Reset()
     {
-        var off = (4.0f / 3.0f) *  Mathf.Tan(Mathf.PI / 8);
-        points = new Vector3[] {
+        SetCircle();
+    }
+
+    private void SetCircle()
+    {
+        var off = (4.0f / 3.0f) * Mathf.Tan(Mathf.PI / 8);
+        m_ControlPoints = new Vector3[] {
             new Vector3(1.0f, 0.0f, 0.0f),
-            
+
             new Vector3(1.0f, off,  0.0f),
             new Vector3(off,  1.0f, 0.0f),
             new Vector3(0.0f, 1.0f, 0.0f),
@@ -193,7 +191,7 @@ public class BezierSpline : MonoBehaviour
             new Vector3(1.0f, -off,  0.0f),
             new Vector3(1.0f,  0.0f, 0.0f),
         };
-        modes = new BezierControlPointMode[] {
+        m_Modes = new BezierControlPointMode[] {
             BezierControlPointMode.Mirrored,
             BezierControlPointMode.Mirrored,
             BezierControlPointMode.Mirrored,
@@ -204,38 +202,30 @@ public class BezierSpline : MonoBehaviour
 
     public Vector3 GetPoint(float t)
     {
-        int i;
+        var i = GetCurveControlPointIndex(ref t);
+        return transform.TransformPoint(GetPoint(m_ControlPoints[i], m_ControlPoints[i + 1], m_ControlPoints[i + 2], m_ControlPoints[i + 3], t));
+    }
+
+    private int GetCurveControlPointIndex(ref float t)
+    {
         if (t >= 1f)
         {
             t = 1f;
-            i = points.Length - 4;
+            return m_ControlPoints.Length - 4;
         }
         else
         {
             t = Mathf.Clamp01(t) * CurveCount;
-            i = (int)t;
+            var i = (int)t;
             t -= i;
-            i *= 3;
+            return i * 3;
         }
-        return transform.TransformPoint(GetPoint(points[i], points[i + 1], points[i + 2], points[i + 3], t));
     }
 
     public Vector3 GetVelocity(float t)
     {
-        int i;
-        if (t >= 1f)
-        {
-            t = 1f;
-            i = points.Length - 4;
-        }
-        else
-        {
-            t = Mathf.Clamp01(t) * CurveCount;
-            i = (int)t;
-            t -= i;
-            i *= 3;
-        }
-        return transform.TransformPoint(GetFirstDerivative(points[i], points[i + 1], points[i + 2], points[i + 3], t)) - transform.position;
+        var i = GetCurveControlPointIndex(ref t);
+        return transform.TransformPoint(GetFirstDerivative(m_ControlPoints[i], m_ControlPoints[i + 1], m_ControlPoints[i + 2], m_ControlPoints[i + 3], t)) - transform.position;
     }
 
     public Vector3 GetDirection(float t)
@@ -245,50 +235,29 @@ public class BezierSpline : MonoBehaviour
 
     public void AddCurve()
     {
-        Vector3 point = points[points.Length - 1];
-        Array.Resize(ref points, points.Length + 3);
+        Vector3 point = m_ControlPoints[m_ControlPoints.Length - 1];
+        Array.Resize(ref m_ControlPoints, m_ControlPoints.Length + 3);
         point.x += 1f;
-        points[points.Length - 3] = point;
+        m_ControlPoints[m_ControlPoints.Length - 3] = point;
         point.x += 1f;
-        points[points.Length - 2] = point;
+        m_ControlPoints[m_ControlPoints.Length - 2] = point;
         point.x += 1f;
-        points[points.Length - 1] = point;
+        m_ControlPoints[m_ControlPoints.Length - 1] = point;
 
-        Array.Resize(ref modes, modes.Length + 1);
-        modes[modes.Length - 1] = modes[modes.Length - 2];
+        Array.Resize(ref m_Modes, m_Modes.Length + 1);
+        m_Modes[m_Modes.Length - 1] = m_Modes[m_Modes.Length - 2];
 
-        EnforceMode(points.Length - 4);
+        EnforceMode(m_ControlPoints.Length - 4);
 
-        if (loop)
+        if (m_Loop)
         {
-            points[points.Length - 1] = points[0];
-            modes[modes.Length - 1] = modes[0];
+            m_ControlPoints[m_ControlPoints.Length - 1] = m_ControlPoints[0];
+            m_Modes[m_Modes.Length - 1] = m_Modes[0];
             EnforceMode(0);
         }
     }
 
-    // Quadratic
-
-    public static Vector3 GetPoint(Vector3 p0, Vector3 p1, Vector3 p2, float t)
-    {
-        t = Mathf.Clamp01(t);
-        float oneMinusT = 1f - t;
-        return
-            oneMinusT * oneMinusT * p0 +
-            2f * oneMinusT * t * p1 +
-            t * t * p2;
-    }
-
-    public static Vector3 GetFirstDerivative(Vector3 p0, Vector3 p1, Vector3 p2, float t)
-    {
-        return
-            2f * (1f - t) * (p1 - p0) +
-            2f * t * (p2 - p1);
-    }
-
-    // Cubic
-
-    public static Vector3 GetPoint(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
+    private static Vector3 GetPoint(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
     {
         t = Mathf.Clamp01(t);
         float oneMinusT = 1f - t;
@@ -299,7 +268,7 @@ public class BezierSpline : MonoBehaviour
             t * t * t * p3;
     }
 
-    public static Vector3 GetFirstDerivative(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
+    private static Vector3 GetFirstDerivative(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
     {
         t = Mathf.Clamp01(t);
         float oneMinusT = 1f - t;
