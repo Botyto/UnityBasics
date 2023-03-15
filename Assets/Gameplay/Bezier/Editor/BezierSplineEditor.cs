@@ -45,12 +45,37 @@ public class BezierSplineEditor : Editor
         if (m_SelectedIndex >= 0 && m_SelectedIndex < m_Spline.ControlPointCount)
         {
             DrawSelectedPointInspector();
+            GUILayout.BeginHorizontal();
+            GUI.enabled = m_SelectedIndex > 1 || m_Spline.Loop; ;
+            if (GUILayout.Button("Add before"))
+            {
+                Undo.RecordObject(m_Spline, "Add control point");
+                EditorUtility.SetDirty(m_Spline);
+                var idx = ((m_SelectedIndex + 1) / 3) * 3 - 2;
+                if (idx < 0) { idx += m_Spline.ControlPointCount; }
+                m_Spline.SplitSegment(idx);
+                m_SelectedIndex = idx + 2;
+            }
+            GUI.enabled = m_SelectedIndex < m_Spline.ControlPointCount - 2 || m_Spline.Loop;
+            if (GUILayout.Button("Add after"))
+            {
+                Undo.RecordObject(m_Spline, "Add control point");
+                EditorUtility.SetDirty(m_Spline);
+                var idx = ((m_SelectedIndex + 1) / 3) * 3;
+                m_Spline.SplitSegment(idx);
+                m_SelectedIndex = idx + 3;
+            }
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
         }
-        if (GUILayout.Button("Add segment"))
+        else
         {
-            Undo.RecordObject(m_Spline, "Add segment");
-            m_Spline.AddSegment();
-            EditorUtility.SetDirty(m_Spline);
+            if (GUILayout.Button("Add segment"))
+            {
+                Undo.RecordObject(m_Spline, "Add segment");
+                m_Spline.AddSegment();
+                EditorUtility.SetDirty(m_Spline);
+            }
         }
     }
 

@@ -258,6 +258,44 @@ public class BezierSpline : MonoBehaviour
         }
     }
 
+    public void SplitSegment(int controlPointIndex)
+    {
+        var newControlPoints = Array.CreateInstance(typeof(Vector3), m_ControlPoints.Length + 3) as Vector3[];
+        var copyCount = ((controlPointIndex + 1) / 3) * 3 + 2;
+        Array.Copy(m_ControlPoints, 0, newControlPoints, 0, copyCount);
+        Array.Copy(m_ControlPoints, copyCount, newControlPoints, copyCount + 3, m_ControlPoints.Length - copyCount);
+        var centerT = (((copyCount - 1) / 3) + 0.5f) / CurveCount;
+        var point = GetPoint(centerT);
+        var fixFactor = 0.2f;
+        newControlPoints[copyCount + 0] = transform.InverseTransformPoint(point - GetVelocity(centerT) * fixFactor);
+        newControlPoints[copyCount + 1] = transform.InverseTransformPoint(point);
+        newControlPoints[copyCount + 2] = transform.InverseTransformPoint(point + GetVelocity(centerT) * fixFactor);
+        var newPointModes = Array.CreateInstance(typeof(BezierControlPointMode), m_Modes.Length + 1) as BezierControlPointMode[];
+        var modesCopyCount = (copyCount - 1) / 3;
+        Array.Copy(m_Modes, 0, newPointModes, 0, modesCopyCount);
+        Array.Copy(m_Modes, modesCopyCount, newPointModes, modesCopyCount + 1, m_Modes.Length - modesCopyCount);
+        m_Modes[modesCopyCount] = BezierControlPointMode.Aligned;
+
+        // De Casteljau
+        var orgStart = copyCount - 2;
+        var beta = new Vector3[6];
+        beta[0] = Vector3.Lerp(m_ControlPoints[orgStart], m_ControlPoints[orgStart + 1], 0.5f);
+        beta[1] = Vector3.Lerp(m_ControlPoints[orgStart + 1], m_ControlPoints[orgStart + 2], 0.5f);
+        beta[2] = Vector3.Lerp(m_ControlPoints[orgStart + 2], m_ControlPoints[orgStart + 3], 0.5f);
+        beta[3] = Vector3.Lerp(beta[0], beta[1], 0.5f);
+        beta[4] = Vector3.Lerp(beta[1], beta[2], 0.5f);
+        beta[5] = Vector3.Lerp(beta[3], beta[4], 0.5f);
+
+        newControlPoints[orgStart + 1] = beta[0];
+        newControlPoints[orgStart + 2] = beta[3];
+        newControlPoints[orgStart + 3] = beta[5];
+        newControlPoints[orgStart + 4] = beta[4];
+        newControlPoints[orgStart + 5] = beta[2];
+
+        m_ControlPoints = newControlPoints;
+        m_Modes = newPointModes;
+    }
+
     private void OnDrawGizmos()
     {
         var myTransform = transform;
