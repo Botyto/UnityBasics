@@ -2,8 +2,8 @@ using System;
 using UnityEngine;
 using UnityEditor;
 
-[ExecuteInEditMode]
 [Serializable]
+[ExecuteInEditMode]
 public class BezierSpline : MonoBehaviour
 {
     public enum ControlPointMode
@@ -18,6 +18,11 @@ public class BezierSpline : MonoBehaviour
 
     [SerializeField]
     private ControlPointMode[] Modes;
+
+    [FindInThis]
+    [SerializeField]
+    [HideInInspector]
+    private Transform Transform;
 
     [SerializeField]
     private bool Loop;
@@ -199,12 +204,13 @@ public class BezierSpline : MonoBehaviour
             ControlPointMode.Mirrored,
             ControlPointMode.Mirrored,
         };
+        Loop = true;
     }
 
     public Vector3 GetPoint(float t)
     {
         var i = GetCurveControlPointIndex(ref t);
-        return transform.TransformPoint(GetPoint(ControlPoints[i], ControlPoints[i + 1], ControlPoints[i + 2], ControlPoints[i + 3], t));
+        return Transform.TransformPoint(GetPoint(ControlPoints[i], ControlPoints[i + 1], ControlPoints[i + 2], ControlPoints[i + 3], t));
     }
 
     private int GetCurveControlPointIndex(ref float t)
@@ -226,7 +232,7 @@ public class BezierSpline : MonoBehaviour
     public Vector3 GetVelocity(float t)
     {
         var i = GetCurveControlPointIndex(ref t);
-        return transform.TransformPoint(GetFirstDerivative(ControlPoints[i], ControlPoints[i + 1], ControlPoints[i + 2], ControlPoints[i + 3], t)) - transform.position;
+        return Transform.TransformPoint(GetFirstDerivative(ControlPoints[i], ControlPoints[i + 1], ControlPoints[i + 2], ControlPoints[i + 3], t)) - Transform.position;
     }
 
     public Vector3 GetDirection(float t)
@@ -267,14 +273,22 @@ public class BezierSpline : MonoBehaviour
         var centerT = (((copyCount - 1) / 3) + 0.5f) / CurveCount;
         var point = GetPoint(centerT);
         var fixFactor = 0.2f;
-        newControlPoints[copyCount + 0] = transform.InverseTransformPoint(point - GetVelocity(centerT) * fixFactor);
-        newControlPoints[copyCount + 1] = transform.InverseTransformPoint(point);
-        newControlPoints[copyCount + 2] = transform.InverseTransformPoint(point + GetVelocity(centerT) * fixFactor);
+        newControlPoints[copyCount + 0] = Transform.InverseTransformPoint(point - GetVelocity(centerT) * fixFactor);
+        newControlPoints[copyCount + 1] = Transform.InverseTransformPoint(point);
+        newControlPoints[copyCount + 2] = Transform.InverseTransformPoint(point + GetVelocity(centerT) * fixFactor);
         var newPointModes = Array.CreateInstance(typeof(ControlPointMode), Modes.Length + 1) as ControlPointMode[];
         var modesCopyCount = (copyCount - 1) / 3;
         Array.Copy(Modes, 0, newPointModes, 0, modesCopyCount);
         Array.Copy(Modes, modesCopyCount, newPointModes, modesCopyCount + 1, Modes.Length - modesCopyCount);
-        Modes[modesCopyCount] = ControlPointMode.Aligned;
+        if (modesCopyCount > 0 && newPointModes[modesCopyCount - 1] == ControlPointMode.Mirrored)
+        {
+            newPointModes[modesCopyCount - 1] = ControlPointMode.Aligned;
+        }
+        if (modesCopyCount < newPointModes.Length - 2 && newPointModes[modesCopyCount + 1] == ControlPointMode.Mirrored)
+        {
+            newPointModes[modesCopyCount + 1] = ControlPointMode.Aligned;
+        }
+        newPointModes[modesCopyCount] = ControlPointMode.Mirrored;
 
         // De Casteljau
         var orgStart = copyCount - 2;
@@ -298,20 +312,20 @@ public class BezierSpline : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        var myTransform = transform;
         for (int i = 0; i < ControlPointCount - 1; i += 3)
         {
-            var p0 = myTransform.TransformPoint(this[i + 0]);
-            var p1 = myTransform.TransformPoint(this[i + 1]);
-            var p2 = myTransform.TransformPoint(this[i + 2]);
-            var p3 = myTransform.TransformPoint(this[i + 3]);
+            var p0 = Transform.TransformPoint(this[i + 0]);
+            var p1 = Transform.TransformPoint(this[i + 1]);
+            var p2 = Transform.TransformPoint(this[i + 2]);
+            var p3 = Transform.TransformPoint(this[i + 3]);
             Handles.DrawBezier(p0, p3, p1, p2, Color.white, null, 2f);
         }
     }
 
     private static Vector3 GetPoint(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
     {
-        t = Mathf.Clamp01(t);
+        if (t >= 1.0f) { return p3; }
+        if (t <= 0.0f) { return p0; }
         float oneMinusT = 1f - t;
         return
             oneMinusT * oneMinusT * oneMinusT * p0 +
@@ -322,7 +336,8 @@ public class BezierSpline : MonoBehaviour
 
     private static Vector3 GetFirstDerivative(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
     {
-        t = Mathf.Clamp01(t);
+        if (t >= 1.0f) { return p3; }
+        if (t <= 0.0f) { return p0; }
         float oneMinusT = 1f - t;
         return
             3f * oneMinusT * oneMinusT * (p1 - p0) +
